@@ -72,10 +72,7 @@ def main():
     model.eval()
     with torch.no_grad():
         metrics = evaluate_model(model, test_dataloader, ood_dataloader)
-    print(
-        "Accuracy:",metrics["accuracy"],
-        "NLL:", metrics["NLL"]
-    )
+    print(metrics)
 
 
     
