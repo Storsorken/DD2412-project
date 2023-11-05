@@ -7,40 +7,33 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 
-from ..utils import get_CIFAR10, train_model, evaluate_model, get_SVHN
+from ..utils import get_CIFAR10, train_model, evaluate_model, get_SVHN, get_dataloaders
 from ..Resnet_Implementation import Resnet18
+from ..Setup import Training_Setup
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device", device)
-    file_path = "Models/finalepoch_Single_Resnet18_9374.pth"
+    file_path = "Models/test_Resnet.pth"
 
-    lr = 0.05
-    epochs = 75
+    training_setup = Training_Setup(
+        lr = 0.05,
+        momentum=0.9,
+        weight_decay=5e-4,
+        gamma=0.1,
+        milestones=[25, 50],
+    )
+
+
     batch_size = 128
-    momentum = 0.9
-    weight_decay = 5e-4
-    gamma = 0.1
-    milestones = [25, 50]
+    epochs = 75
 
-    # Prepare CIFAR10 dataloaders
     data = get_CIFAR10()
-    train_dataloader = DataLoader(data["train"], batch_size = batch_size, shuffle = True)
-    test_dataloader = DataLoader(data["test"], batch_size = 512, shuffle = False)
-    dataloaders = {
-        "train":train_dataloader, 
-        "test":test_dataloader
-        }
+    dataloaders = get_dataloaders(data, batch_size, shuffle=True)
 
-    if "validation" in data:
-        val_dataloader = DataLoader(data["validation"], batch_size = 512, shuffle = False)
-        dataloaders["validation"] = val_dataloader
-        file_path = "Models/Single_Resnet18.pth"
-
-    # Prepare SVHN dataset
     # This dataset is used for OOD test on models trained on CIFAR
     ood_data = get_SVHN()
-    ood_dataloader = DataLoader(ood_data["test"], batch_size = 512, shuffle = False)
+    ood_dataloaders = get_dataloaders(ood_data, batch_size)
     
     if os.path.exists(file_path):
         model = torch.load(file_path)
@@ -48,30 +41,20 @@ def main():
     else:
         model = Resnet18(inputChannels=3, nClasses=10)
         model.to(device)
-
-        loss_function = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum = momentum, weight_decay=weight_decay)
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones, gamma)
-
         
         
         train_model(
             model, 
             epochs=epochs,
-            loss_function=loss_function,
-            optimizer=optimizer, 
+            training_setup=training_setup, 
             dataloaders = dataloaders,
-            model_name="Single_Resnet18.pth",
-            scheduler=scheduler
+            save_path=file_path,
             )
-        
-        torch.save(model, "Models/finalepoch_Single_Resnet18.pth")
-
 
     
     model.eval()
     with torch.no_grad():
-        metrics = evaluate_model(model, test_dataloader, ood_dataloader)
+        metrics = evaluate_model(model, dataloaders["test"], ood_dataloaders["test"])
     print(metrics)
 
 

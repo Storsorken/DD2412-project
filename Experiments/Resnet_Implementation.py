@@ -99,6 +99,9 @@ class Resnet18(nn.Module):
         out = self.pool(out)
         out = self.flatten(out)
         return self.linear(out)
+    
+    def probabilities(self, x):
+        return F.softmax(self.forward(x), dim = -1)
 
     def make_layer(self, in_channels, out_channels, stride):
         return nn.Sequential(
