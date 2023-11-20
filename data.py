@@ -6,14 +6,14 @@ def get_dataloaders(pytorch_dataset, batch_size, num_workers, train_transform, t
     Returns the dataloaders for the training, validation, and test sets.
     """
     train_data = pytorch_dataset(
-        root="data",
+        root="local-dataset",
         train=True,
         download=True,
         transform=train_transform,
     )
 
     test_data = pytorch_dataset(
-        root="data",
+        root="local-dataset",
         train=False,
         download=True,
         transform=test_transform,
