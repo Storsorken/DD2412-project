@@ -22,16 +22,17 @@ def train(dataloader, model, loss_fn, optimizer, scheduler, device):
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
 
+        optimizer.zero_grad()
         pred = model(X)
         loss = loss_fn(pred, y)
-
         loss.backward()
         optimizer.step()
         scheduler.step()
-        optimizer.zero_grad()
 
         running_loss += loss.item() * X.size(0)
         running_correct += (pred.argmax(1) == y).sum().item()
+    #scheduler.step()
+
     return {
         "train_loss": running_loss / num_data_points,
         "train_acc": running_correct / num_data_points,
@@ -80,7 +81,16 @@ def train_loop(config):
                 device=config["device"],
             )
         )
-        test_metrics.append(
+        
+        print(
+            f"train_loss: {train_metrics[-1]['train_loss']:.6f}, ",
+            f"train_acc: {train_metrics[-1]['train_acc']:.6f}, ",
+            f"lr: {scheduler.get_last_lr()[0]:.6f}",
+        #    f"test_loss: {test_metrics[-1]['test_loss']:.6f}, ",
+        #    f"test_acc: {test_metrics[-1]['test_acc']:.6f}",
+        )
+    
+    test_metrics.append(
             test(
                 dataloader=test_dataloader,
                 model=model,

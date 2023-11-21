@@ -301,6 +301,14 @@ def resnet18(**kwargs: Any) -> ResNet:
     return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
 
+def cifar_resnet18(**kwargs: Any) -> ResNet:
+    # ResNet-18 for CIFAR-10: modified from https://lightning.ai/docs/pytorch/stable/notebooks/lightning_examples/cifar10-baseline.html
+    model = resnet18(num_classes=10, **kwargs)
+    model.conv1 = nn.Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+    model.maxpool = nn.Identity()
+    return model
+
+
 def resnet50(**kwargs: Any) -> ResNet:
     """ResNet-50 from `Deep Residual Learning for Image Recognition <https://arxiv.org/abs/1512.03385>`__.
 
