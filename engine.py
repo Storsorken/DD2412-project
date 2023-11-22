@@ -4,7 +4,8 @@ import data
 
 
 def init_optimizer_and_scheduler(config, model):
-    optimizer = config["optimizer"](model.parameters(), lr=config["learning_rate"])
+    optimizer = config["optimizer"](model.parameters(), lr=config["learning_rate"],
+                                    **config["optimizer_settings"])
     scheduler = config["scheduler"](optimizer, **config["scheduler_settings"])
     return optimizer, scheduler
 
