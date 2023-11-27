@@ -339,6 +339,58 @@ def train_ensemble_standard(DE, epochs, training_setup, dataloaders, save_path =
         else:
             train_model(model, epochs, training_setup, dataloaders)
     torch.save(DE, save_path)
+
+
+def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "Models/model.pth"):
+    PE = PE.to(device)
+
+    loss_function, optimizer, scheduler = training_setup.create_training_setup(PE)
+    M = PE.M
+    model = PE
+    
+    if "validation" in dataloaders:
+        perform_val = True
+        valDataLoader = dataloaders["validation"]
+    else:
+        perform_val = False
+        valDataLoader = None
+
+    trainDataLoader = dataloaders["train"]
+
+    best_accuracy = 0.0
+
+    for epoch in tqdm(range(epochs)):
+        for i, (images, labels) in enumerate(trainDataLoader):
+            images = images.to(device)
+            labels = labels.to(device)
+            labels = labels.repeat_interleave(M)
+            output = model(images)
+            output = output.view(-1, PE.nClasses)
+            loss = loss_function(output, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        if perform_val:
+            model.eval()
+            with torch.no_grad():
+                acc = accuracy(model, valDataLoader)
+                if acc > best_accuracy:
+                    best_accuracy = acc
+                    #print("New best validation accuracy: ", best_accuracy)
+                    torch.save(model, save_path)
+            model.train()
+            
+        if scheduler is not None:
+            scheduler.step()
+
+    if not perform_val:
+        torch.save(model, save_path)
+    model = torch.load(save_path)
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
     
 
 if __name__ == "__main__":

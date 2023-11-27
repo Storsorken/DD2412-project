@@ -3,23 +3,25 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from collections import OrderedDict
+#from Resnet_Implementation import BasicBlock, BottleNeck
+import warnings
 
-#https://debuggercafe.com/implementing-resnet18-in-pytorch-from-scratch/
 
-class BasicBlock(nn.Module):
+class PackedBasicBlock(nn.Module):
     def __init__(
             self, 
             inputChannels:int,
             outputChannels:int,
             stride:int = 1,
-            groups:int = 1,
-            expansion:int = 1,
+            alpha:int = 1,
+            M:int = 1,
+            gamma:int = 1,
+            minChannels = 64,
         ) -> None:
 
-        super(BasicBlock, self).__init__()
-
-        inputChannels*=expansion
-        outputChannels*=expansion
+        super(PackedBasicBlock, self).__init__()
+        inputChannels *= 1
+        outputChannels *= 1
 
         self.conv1 = nn.Conv2d(
             in_channels=inputChannels, 
@@ -27,7 +29,7 @@ class BasicBlock(nn.Module):
             kernel_size=3, 
             stride=stride, 
             padding = 1,
-            groups=groups,
+            groups=M,
             bias = False
             )
         self.bn1 = nn.BatchNorm2d(outputChannels)
@@ -37,7 +39,7 @@ class BasicBlock(nn.Module):
             kernel_size=3, 
             stride=1, 
             padding = 1,
-            groups=groups,
+            groups=self.get_groupsize(outputChannels, minChannels, gamma, M),
             bias = False
             )
         self.bn2 = nn.BatchNorm2d(outputChannels)
@@ -49,11 +51,24 @@ class BasicBlock(nn.Module):
                 out_channels=outputChannels, 
                 kernel_size=1, 
                 stride=stride,
-                groups=groups, 
-                bias=False
+                groups=self.get_groupsize(inputChannels, minChannels, gamma, M),
+                bias = False, 
                 ),
                 nn.BatchNorm2d(outputChannels)
             )
+
+    def get_groupsize(self, channels, minChannels, gamma, M):
+        final_gamma = gamma
+        groups = gamma*M
+        while (channels//groups < minChannels or channels%groups != 0) and final_gamma > 1:
+            final_gamma -= 1
+            groups = final_gamma*M
+        
+        if final_gamma != gamma:
+            warnings.warn("Gamma was changed to meet the requirements for the number of channels")
+
+        return groups
+
 
     def forward(self, x):
         out = self.conv1(x)
@@ -61,27 +76,28 @@ class BasicBlock(nn.Module):
         out = F.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
-
+        v =  self.shortcut(x)
         return F.relu(out + self.shortcut(x))
     
     def __str__(self) -> str:
         return "BasicBlock"
     
 
-class BottleNeck(nn.Module):
+class PackedBottleNeck(nn.Module):
     def __init__(
             self, 
             inputChannels:int,
             outputChannels:int,
             stride:int = 1,
-            groups:int = 1,
-            expansion:int = 1,
+            alpha:int = 1,
+            M:int = 1,
+            gamma:int = 1,
         ) -> None:
 
-        super(BottleNeck, self).__init__()
+        super(PackedBottleNeck, self).__init__()
 
-        inputChannels*=expansion
-        outputChannels*=expansion
+        inputChannels*=alpha*M
+        outputChannels*=alpha*M
         block_channels = outputChannels//4
 
         self.conv1 = nn.Conv2d(
@@ -90,7 +106,7 @@ class BottleNeck(nn.Module):
             kernel_size=1, 
             stride=1, 
             padding = 0,
-            groups=groups,
+            groups=M,
             bias = False
             )
         self.bn1 = nn.BatchNorm2d(block_channels)
@@ -100,7 +116,7 @@ class BottleNeck(nn.Module):
             kernel_size=3, 
             stride=stride, 
             padding = 1,
-            groups=groups,
+            groups=M*gamma,
             bias = False
             )
         self.bn2 = nn.BatchNorm2d(block_channels)
@@ -110,7 +126,7 @@ class BottleNeck(nn.Module):
             kernel_size=1, 
             stride=1, 
             padding = 0,
-            groups=groups,
+            groups=M*gamma,
             bias = False
             )
         self.bn3 = nn.BatchNorm2d(outputChannels)
@@ -122,7 +138,7 @@ class BottleNeck(nn.Module):
                 out_channels=outputChannels, 
                 kernel_size=1, 
                 stride=stride, 
-                groups=groups,
+                groups=M*gamma,
                 bias=False
                 ),
                 nn.BatchNorm2d(outputChannels)
@@ -142,9 +158,9 @@ class BottleNeck(nn.Module):
     
     def __str__(self) -> str:
         return "BottleNeck"
-    
 
-class Resnet(nn.Module):
+
+class PackedEnsemble(nn.Module):
     #TODO kaming normal init?
     def __init__(
             self,
@@ -153,10 +169,18 @@ class Resnet(nn.Module):
             Block,
             output_sizes,
             layer_sizes,
+            alpha:int,
+            M:int,
+            gamma:int,
         ) -> None:
         super().__init__()
+        self.M = M
+        self.alpha = alpha
+        self.gamma = gamma
+        self.nClasses = nClasses
 
-        channels = 64
+        channels = 64*alpha
+        output_sizes = np.array(output_sizes)*alpha
 
         self.conv1 = nn.Conv2d(
             in_channels=inputChannels, 
@@ -168,17 +192,19 @@ class Resnet(nn.Module):
             )
         
         self.bn1 = nn.BatchNorm2d(channels)
-        self.layer1 = self.make_layer(Block, channels, output_sizes[0], layer_sizes[0], 1)
-        self.layer2 = self.make_layer(Block, output_sizes[0], output_sizes[1], layer_sizes[1], 2)
-        self.layer3 = self.make_layer(Block, output_sizes[1], output_sizes[2], layer_sizes[2], 2)
-        self.layer4 = self.make_layer(Block, output_sizes[2], output_sizes[3], layer_sizes[3], 2)
+        self.layer1 = self.make_layer(Block, channels, output_sizes[0], layer_sizes[0], 1, alpha, M, gamma)
+        self.layer2 = self.make_layer(Block, output_sizes[0], output_sizes[1], layer_sizes[1], 2, alpha, M, gamma)
+        self.layer3 = self.make_layer(Block, output_sizes[1], output_sizes[2], layer_sizes[2], 2, alpha, M, gamma)
+        self.layer4 = self.make_layer(Block, output_sizes[2], output_sizes[3], layer_sizes[3], 2, alpha, M, gamma)
 
         self.pool = nn.AdaptiveAvgPool2d(output_size=1)
         self.flatten = nn.Flatten(1)
 
-        self.linear = nn.Linear(
-            output_sizes[3],
-            nClasses
+        self.grouped_linear = nn.Conv2d(
+            in_channels = output_sizes[3],
+            out_channels = nClasses*M,
+            kernel_size=1,
+            groups=M
         )
 
     def forward(self, x):
@@ -189,50 +215,68 @@ class Resnet(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         out = self.pool(out)
+        #out = self.flatten(out)
+        out = self.grouped_linear(out)
         out = self.flatten(out)
-        return self.linear(out)
+        return out
     
     def probabilities(self, x):
-        return F.softmax(self.forward(x), dim = -1)
+        out = self.forward(x)
+        out = torch.reshape(out, (out.shape[0], self.M, self.nClasses))
+        p = F.softmax(out, dim = -1)
+        p = torch.mean(p, dim = 1)
+        return p
     
-    def make_layer(self, Block, in_channels, out_channels, layer_size, stride, groups:int = 1):
+    def make_layer(self, Block, in_channels, out_channels, layer_size, stride, alpha, M, gamma):
         od = OrderedDict()
-        block = Block(in_channels, out_channels, stride=stride, groups=groups)
+        block = Block(in_channels, out_channels, stride,  alpha, M, gamma)
         od[str(block) + "0"] = block
         for i in range(1,layer_size):
-            block = Block(out_channels, out_channels, stride=1, groups=groups)
+            block = Block(out_channels, out_channels, 1,  alpha, M, gamma)
             od[str(block) + str(i)] = block
         return nn.Sequential(od)
     
 
-class Resnet18(Resnet):
+
+class PackedResnet18(PackedEnsemble):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int
+            nClasses:int,
+            alpha:int,
+            M:int,
+            gamma:int,
         ) -> None:
 
         super().__init__(
             inputChannels = inputChannels,
             nClasses = nClasses,
-            Block = BasicBlock,
+            Block = PackedBasicBlock,
             output_sizes = [64, 64*2, 64*4, 64*8],
-            layer_sizes = [2, 2, 2, 2]
+            layer_sizes = [2, 2, 2, 2],
+            alpha = alpha,
+            M = M,
+            gamma = gamma,
             )
         
 
-class Resnet50(Resnet):
+class PackedResnet50(PackedEnsemble):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int
+            nClasses:int,
+            alpha:int,
+            M:int,
+            gamma:int,
         ) -> None:
 
         super().__init__(
             inputChannels = inputChannels,
             nClasses = nClasses,
-            Block = BottleNeck,
+            Block = PackedBottleNeck,
             output_sizes = [256, 256*2, 256*4, 256*8],
-            layer_sizes = [3, 4, 6, 3]
+            layer_sizes = [3, 4, 6, 3],
+            alpha = alpha,
+            M = M,
+            gamma = gamma,
             )
-    

@@ -7,14 +7,14 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 
-from ..utils import get_CIFAR10, train_model, evaluate_model, get_SVHN, get_dataloaders
+from ..utils import get_CIFAR10, train_model, evaluate_model, get_SVHN, get_dataloaders, count_parameters
 from ..Resnet_Implementation import Resnet18, Resnet50
 from ..Setup import Training_Setup
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device", device)
-    file_path = "Models/test_Resnet.pth"
+    file_path = "Models/test_Resnet18.pth"
 
     training_setup = Training_Setup(
         lr = 0.05,
@@ -42,6 +42,9 @@ def main():
         model = Resnet18(inputChannels=3, nClasses=10)
         print(model)
         model.to(device)
+
+        num_params = count_parameters(model)
+        print(f"Number of parameters in the model: {num_params}")
         
         
         train_model(
