@@ -20,8 +20,6 @@ class PackedBasicBlock(nn.Module):
         ) -> None:
 
         super(PackedBasicBlock, self).__init__()
-        inputChannels *= 1
-        outputChannels *= 1
 
         self.conv1 = nn.Conv2d(
             in_channels=inputChannels, 
@@ -76,11 +74,10 @@ class PackedBasicBlock(nn.Module):
         out = F.relu(out)
         out = self.conv2(out)
         out = self.bn2(out)
-        v =  self.shortcut(x)
         return F.relu(out + self.shortcut(x))
     
     def __str__(self) -> str:
-        return "BasicBlock"
+        return "PackedBasicBlock"
     
 
 class PackedBottleNeck(nn.Module):
@@ -92,12 +89,11 @@ class PackedBottleNeck(nn.Module):
             alpha:int = 1,
             M:int = 1,
             gamma:int = 1,
+            minChannels = 64,
         ) -> None:
 
         super(PackedBottleNeck, self).__init__()
 
-        inputChannels*=alpha*M
-        outputChannels*=alpha*M
         block_channels = outputChannels//4
 
         self.conv1 = nn.Conv2d(
@@ -116,7 +112,7 @@ class PackedBottleNeck(nn.Module):
             kernel_size=3, 
             stride=stride, 
             padding = 1,
-            groups=M*gamma,
+            groups=self.get_groupsize(block_channels, minChannels, gamma, M),
             bias = False
             )
         self.bn2 = nn.BatchNorm2d(block_channels)
@@ -126,7 +122,7 @@ class PackedBottleNeck(nn.Module):
             kernel_size=1, 
             stride=1, 
             padding = 0,
-            groups=M*gamma,
+            groups=self.get_groupsize(block_channels, minChannels, gamma, M),
             bias = False
             )
         self.bn3 = nn.BatchNorm2d(outputChannels)
@@ -138,7 +134,7 @@ class PackedBottleNeck(nn.Module):
                 out_channels=outputChannels, 
                 kernel_size=1, 
                 stride=stride, 
-                groups=M*gamma,
+                groups=self.get_groupsize(inputChannels, minChannels, gamma, M),
                 bias=False
                 ),
                 nn.BatchNorm2d(outputChannels)
@@ -156,8 +152,20 @@ class PackedBottleNeck(nn.Module):
 
         return F.relu(out + self.shortcut(x))
     
+    def get_groupsize(self, channels, minChannels, gamma, M):
+        final_gamma = gamma
+        groups = gamma*M
+        while (channels//groups < minChannels or channels%groups != 0) and final_gamma > 1:
+            final_gamma -= 1
+            groups = final_gamma*M
+        
+        if final_gamma != gamma:
+            warnings.warn("Gamma was changed to meet the requirements for the number of channels")
+
+        return groups
+    
     def __str__(self) -> str:
-        return "BottleNeck"
+        return "PackedBottleNeck"
 
 
 class PackedEnsemble(nn.Module):
@@ -215,7 +223,6 @@ class PackedEnsemble(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         out = self.pool(out)
-        #out = self.flatten(out)
         out = self.grouped_linear(out)
         out = self.flatten(out)
         return out
