@@ -12,7 +12,6 @@ class BasicBlock(nn.Module):
             inputChannels:int,
             outputChannels:int,
             stride:int = 1,
-            groups:int = 1,
             expansion:int = 1,
         ) -> None:
 
@@ -27,7 +26,6 @@ class BasicBlock(nn.Module):
             kernel_size=3, 
             stride=stride, 
             padding = 1,
-            groups=groups,
             bias = False
             )
         self.bn1 = nn.BatchNorm2d(outputChannels)
@@ -37,7 +35,6 @@ class BasicBlock(nn.Module):
             kernel_size=3, 
             stride=1, 
             padding = 1,
-            groups=groups,
             bias = False
             )
         self.bn2 = nn.BatchNorm2d(outputChannels)
@@ -49,7 +46,6 @@ class BasicBlock(nn.Module):
                 out_channels=outputChannels, 
                 kernel_size=1, 
                 stride=stride,
-                groups=groups, 
                 bias=False
                 ),
                 nn.BatchNorm2d(outputChannels)
@@ -74,7 +70,6 @@ class BottleNeck(nn.Module):
             inputChannels:int,
             outputChannels:int,
             stride:int = 1,
-            groups:int = 1,
             expansion:int = 1,
         ) -> None:
 
@@ -90,7 +85,6 @@ class BottleNeck(nn.Module):
             kernel_size=1, 
             stride=1, 
             padding = 0,
-            groups=groups,
             bias = False
             )
         self.bn1 = nn.BatchNorm2d(block_channels)
@@ -100,7 +94,6 @@ class BottleNeck(nn.Module):
             kernel_size=3, 
             stride=stride, 
             padding = 1,
-            groups=groups,
             bias = False
             )
         self.bn2 = nn.BatchNorm2d(block_channels)
@@ -110,7 +103,6 @@ class BottleNeck(nn.Module):
             kernel_size=1, 
             stride=1, 
             padding = 0,
-            groups=groups,
             bias = False
             )
         self.bn3 = nn.BatchNorm2d(outputChannels)
@@ -122,7 +114,6 @@ class BottleNeck(nn.Module):
                 out_channels=outputChannels, 
                 kernel_size=1, 
                 stride=stride, 
-                groups=groups,
                 bias=False
                 ),
                 nn.BatchNorm2d(outputChannels)
@@ -183,7 +174,7 @@ class Resnet(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        out = self.bn1(out)
+        out = F.relu(self.bn1(out))
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -195,12 +186,12 @@ class Resnet(nn.Module):
     def probabilities(self, x):
         return F.softmax(self.forward(x), dim = -1)
     
-    def make_layer(self, Block, in_channels, out_channels, layer_size, stride, groups:int = 1):
+    def make_layer(self, Block, in_channels, out_channels, layer_size, stride):
         od = OrderedDict()
-        block = Block(in_channels, out_channels, stride=stride, groups=groups)
+        block = Block(in_channels, out_channels, stride=stride)
         od[str(block) + "0"] = block
         for i in range(1,layer_size):
-            block = Block(out_channels, out_channels, stride=1, groups=groups)
+            block = Block(out_channels, out_channels, stride=1)
             od[str(block) + str(i)] = block
         return nn.Sequential(od)
     

@@ -7,5 +7,5 @@ if __name__ == "__main__":
     #main2()
     #test1()
     #main()
-    #PEResnet18_classification()
-    PEResnet50_classification()
+    PEResnet18_classification()
+    #PEResnet50_classification()

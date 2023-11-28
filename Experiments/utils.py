@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from torchvision import datasets
 from torchvision import transforms
-from torchmetrics.classification import BinaryAveragePrecision, BinaryAUROC
+from torchmetrics.classification import BinaryAveragePrecision, BinaryAUROC, Accuracy
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -127,6 +127,31 @@ def accuracy(model, dataloader):
 
     accuracy = correct/N
     return accuracy.item()
+
+
+""" def accuracy(model, dataloader):
+    N = len(dataloader.dataset)
+
+    probs = torch.zeros((N, 10), device=device)
+    targets = torch.zeros(N,dtype=torch.int64, device=device)
+
+    accuracy = Accuracy(
+                        task="multiclass", num_classes=10
+                    ).to(device)
+    
+    i = 0
+    for images, labels in dataloader:
+        idx = torch.arange(i, i + len(labels))
+        images = images.to(device)
+        labels = labels.to(device)
+        output_probs = model.probabilities(images)
+        probs[idx,:] = output_probs
+        targets[idx] = labels
+        i += len(labels)
+
+
+
+    return accuracy(probs, targets) """
 
 def NLL(model, dataloader):
     nll = torch.zeros(1, device=device)
@@ -303,11 +328,11 @@ def train_model(model, epochs, training_setup, dataloaders, save_path = "Models/
 
     for epoch in tqdm(range(epochs)):
         for i, (images, labels) in enumerate(trainDataLoader):
+            optimizer.zero_grad()
             images = images.to(device)
             labels = labels.to(device)
             output = model(images)
             loss = loss_function(output, labels)
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -361,13 +386,13 @@ def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "
 
     for epoch in tqdm(range(epochs)):
         for i, (images, labels) in enumerate(trainDataLoader):
+            optimizer.zero_grad()
             images = images.to(device)
             labels = labels.to(device)
             labels = labels.repeat_interleave(M)
             output = model(images)
             output = output.view(-1, PE.nClasses)
             loss = loss_function(output, labels)
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
