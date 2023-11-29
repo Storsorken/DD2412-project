@@ -104,7 +104,7 @@ def PEResnet50_classification():
         PE_model.to(device)
 
         num_params = count_parameters(PE_model)
-        print(PE_model)
+        #print(PE_model)
         print(f"Number of parameters in the model: {num_params}")
         
         

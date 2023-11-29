@@ -21,6 +21,9 @@ class PackedBasicBlock(nn.Module):
 
         super(PackedBasicBlock, self).__init__()
 
+        inputChannels *= alpha
+        outputChannels *= alpha
+
         self.conv1 = nn.Conv2d(
             in_channels=inputChannels, 
             out_channels=outputChannels, 
@@ -93,6 +96,9 @@ class PackedBottleNeck(nn.Module):
         ) -> None:
 
         super(PackedBottleNeck, self).__init__()
+
+        inputChannels *= alpha
+        outputChannels *= alpha
 
         block_channels = outputChannels//4
 
@@ -187,19 +193,18 @@ class PackedEnsemble(nn.Module):
         self.gamma = gamma
         self.nClasses = nClasses
 
-        channels = 64*alpha
-        output_sizes = np.array(output_sizes)*alpha
+        channels = 64
 
         self.conv1 = nn.Conv2d(
             in_channels=inputChannels, 
-            out_channels=channels, 
+            out_channels=channels*alpha, 
             kernel_size=3, 
             stride=1, 
             padding = 1,
             bias = False
             )
         
-        self.bn1 = nn.BatchNorm2d(channels)
+        self.bn1 = nn.BatchNorm2d(channels*alpha)
         self.layer1 = self.make_layer(Block, channels, output_sizes[0], layer_sizes[0], 1, alpha, M, gamma)
         self.layer2 = self.make_layer(Block, output_sizes[0], output_sizes[1], layer_sizes[1], 2, alpha, M, gamma)
         self.layer3 = self.make_layer(Block, output_sizes[1], output_sizes[2], layer_sizes[2], 2, alpha, M, gamma)
@@ -209,7 +214,7 @@ class PackedEnsemble(nn.Module):
         self.flatten = nn.Flatten(1)
 
         self.grouped_linear = nn.Conv2d(
-            in_channels = output_sizes[3],
+            in_channels = output_sizes[3]*alpha,
             out_channels = nClasses*M,
             kernel_size=1,
             groups=M
