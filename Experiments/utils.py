@@ -3,13 +3,22 @@ import torch
 import torch.nn.functional as F
 from torchvision import datasets
 from torchvision import transforms
-from torchmetrics.classification import BinaryAveragePrecision, BinaryAUROC, Accuracy
+from torchmetrics.classification import BinaryAveragePrecision, BinaryAUROC
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def init_transform(normalize:bool = True, random_crop:bool=True, hflip_prob:float = 0.5):
+def get_dataset_stats(dataset_name:str):
+    if dataset_name == "CIFAR10":
+        mean = (0.4914, 0.4822, 0.4465)
+        std=(0.2470, 0.2435, 0.2616)
+    elif dataset_name == "CIFAR100":
+        mean = (0.5071, 0.4865, 0.4409)
+        std=(0.2673, 0.2564, 0.2761)
+    return mean, std
+
+def init_transform(random_crop:bool=True, hflip_prob:float = 0.5, dataset_name:str = None):
     test_transform_list = []
     train_transform_list = []
     
@@ -19,12 +28,13 @@ def init_transform(normalize:bool = True, random_crop:bool=True, hflip_prob:floa
         train_transform_list.append(transforms.RandomHorizontalFlip(p = hflip_prob))
 
     train_transform_list.append(transforms.ToTensor())
+    train_transform_list.append(transforms.ConvertImageDtype(torch.float32))
     test_transform_list.append(transforms.ToTensor())
 
-    if normalize:
-        train_transform_list.append(transforms.Normalize(mean = (0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)))
-        test_transform_list.append(transforms.Normalize(mean = (0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)))
-    
+    if dataset_name is not None:
+        mean, std = get_dataset_stats(dataset_name)
+        train_transform_list.append(transforms.Normalize(mean = mean, std = std))
+        test_transform_list.append(transforms.Normalize(mean = mean, std = std))
 
     train_transform = transforms.Compose(train_transform_list)
     test_transform = transforms.Compose(test_transform_list)
@@ -50,7 +60,9 @@ def training_validation_idx(dataset_size:int, trainsplit:float):
 
 def get_CIFAR10(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=True, hflip_prob:float = 0.5):
     data = {}
-    data_transforms = init_transform(normalize, random_crop, hflip_prob)
+    data_transforms = init_transform(random_crop, hflip_prob, 
+                                     dataset_name = "CIFAR10" if normalize else None)
+    
     trainData = datasets.CIFAR10(root = "Data/CIFAR10", train=True, transform=data_transforms["train transform"], download=True)
 
     if trainsplit < 1.0:
@@ -68,7 +80,8 @@ def get_CIFAR10(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=Tr
 
 def get_CIFAR100(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=True, hflip_prob:float = 0.5):
     data = {}
-    data_transforms = init_transform(normalize, random_crop, hflip_prob)
+    data_transforms = init_transform(random_crop, hflip_prob, 
+                                     dataset_name = "CIFAR100" if normalize else None)
     trainData = datasets.CIFAR100(root = "Data/CIFAR100", train=True, transform=data_transforms["train transform"], download=True)
 
     if trainsplit < 1.0:
@@ -84,9 +97,10 @@ def get_CIFAR100(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=T
     data["test"] = testData
     return data
 
-def get_SVHN(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=False, hflip_prob:float = 0.0):
+def get_SVHN(in_dataset_name:str, trainsplit:float=1.0, random_crop:bool=False, hflip_prob:float = 0.0):
     data = {}
-    data_transforms = init_transform(normalize, random_crop, hflip_prob)
+    data_transforms = init_transform(random_crop, hflip_prob, 
+                                     dataset_name = in_dataset_name)
     trainData = datasets.SVHN(root = "Data/SVHN", split="train", transform=data_transforms["train transform"], download=True)
 
     if trainsplit < 1.0:
@@ -127,31 +141,6 @@ def accuracy(model, dataloader):
 
     accuracy = correct/N
     return accuracy.item()
-
-
-""" def accuracy(model, dataloader):
-    N = len(dataloader.dataset)
-
-    probs = torch.zeros((N, 10), device=device)
-    targets = torch.zeros(N,dtype=torch.int64, device=device)
-
-    accuracy = Accuracy(
-                        task="multiclass", num_classes=10
-                    ).to(device)
-    
-    i = 0
-    for images, labels in dataloader:
-        idx = torch.arange(i, i + len(labels))
-        images = images.to(device)
-        labels = labels.to(device)
-        output_probs = model.probabilities(images)
-        probs[idx,:] = output_probs
-        targets[idx] = labels
-        i += len(labels)
-
-
-
-    return accuracy(probs, targets) """
 
 def NLL(model, dataloader):
     nll = torch.zeros(1, device=device)

@@ -239,6 +239,19 @@ class PackedEnsemble(nn.Module):
         p = torch.mean(p, dim = 1)
         return p
     
+    def ensemble_redictions(self, x):
+        """
+        Returns: the predictions of the different models in the ensemble
+        if the number of members is M, and x is of length 1, return M predictions
+        """
+        out = self.forward(x)
+        out = torch.reshape(out, (out.shape[0], self.M, self.nClasses))
+        preds = torch.argmax(out, dim = -1)
+        return preds
+    
+    def ensemble_size(self):
+        return self.M
+    
     def make_layer(self, Block, in_channels, out_channels, layer_size, stride, alpha, M, gamma):
         od = OrderedDict()
         block = Block(in_channels, out_channels, stride,  alpha, M, gamma)

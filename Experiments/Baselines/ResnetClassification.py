@@ -7,7 +7,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 
-from ..utils import get_CIFAR10, train_model, evaluate_model, get_SVHN, get_dataloaders, count_parameters
+from ..utils import get_CIFAR10, get_CIFAR100, train_model, evaluate_model, get_SVHN, get_dataloaders, count_parameters
 from ..Resnet_Implementation import Resnet18, Resnet50
 from ..Setup import Training_Setup
 
@@ -32,7 +32,7 @@ def main():
     dataloaders = get_dataloaders(data, batch_size, shuffle=True)
 
     # This dataset is used for OOD test on models trained on CIFAR
-    ood_data = get_SVHN()
+    ood_data = get_SVHN(in_dataset_name="CIFAR10")
     ood_dataloaders = get_dataloaders(ood_data, batch_size)
     
     if os.path.exists(file_path):
@@ -84,7 +84,7 @@ def main2():
     dataloaders = get_dataloaders(data, batch_size, shuffle=True)
 
     # This dataset is used for OOD test on models trained on CIFAR
-    ood_data = get_SVHN()
+    ood_data = get_SVHN(in_dataset_name="CIFAR10")
     ood_dataloaders = get_dataloaders(ood_data, batch_size)
     
     if os.path.exists(file_path):

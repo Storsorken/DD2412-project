@@ -28,7 +28,7 @@ def test1():
     dataloaders = get_dataloaders(data, batch_size, shuffle=True)
 
     # This dataset is used for OOD test on models trained on CIFAR
-    ood_data = get_SVHN()
+    ood_data = get_SVHN(in_dataset_name="CIFAR10")
     ood_dataloaders = get_dataloaders(ood_data, batch_size)
     
     if os.path.exists(file_path):

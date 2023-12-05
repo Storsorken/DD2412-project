@@ -48,6 +48,22 @@ class DeepClassificationEnsemble:
         for model in self.models:
             model.train()
 
+    def ensemble_size(self):
+        return self.n_models
+    
+    def ensemble_redictions(self, x):
+        """
+        Returns: the predictions of the different models in the ensemble
+        if the number of members is M, and x is of length 1, return M predictions
+        """
+        preds = torch.zeros((x.shape[0], self.n_models), dtype=int, device=self.device)
+        for i, model in enumerate(self.models):
+            out = model(x)
+            model_preds = torch.argmax(out, dim = -1)
+            preds[:, i] = model_preds
+
+        return preds
+
     def __call__(self, x) -> Any:
         return self.forward(x)
     
