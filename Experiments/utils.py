@@ -18,7 +18,7 @@ def get_dataset_stats(dataset_name:str):
         std=(0.2673, 0.2564, 0.2761)
     return mean, std
 
-def init_transform(random_crop:bool=True, hflip_prob:float = 0.5, dataset_name:str = None):
+def init_transform(random_crop:bool=False, hflip_prob:float = 0.5, dataset_name:str = None):
     test_transform_list = []
     train_transform_list = []
     
@@ -58,7 +58,7 @@ def training_validation_idx(dataset_size:int, trainsplit:float):
     return (train_idx, valid_idx)
 
 
-def get_CIFAR10(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=True, hflip_prob:float = 0.5):
+def get_CIFAR10(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=False, hflip_prob:float = 0.5):
     data = {}
     data_transforms = init_transform(random_crop, hflip_prob, 
                                      dataset_name = "CIFAR10" if normalize else None)
@@ -78,7 +78,7 @@ def get_CIFAR10(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=Tr
     data["test"] = testData
     return data
 
-def get_CIFAR100(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=True, hflip_prob:float = 0.5):
+def get_CIFAR100(trainsplit:float=1.0, normalize:bool = True, random_crop:bool=False, hflip_prob:float = 0.5):
     data = {}
     data_transforms = init_transform(random_crop, hflip_prob, 
                                      dataset_name = "CIFAR100" if normalize else None)
@@ -299,7 +299,7 @@ def evaluate_model(model, dataloader, ood_dataloader):
     result.update(ood_results)
     return result
 
-def train_model(model, epochs, training_setup, dataloaders, save_path = "Models/model.pth"):
+def train_model(model, epochs, training_setup, dataloaders, save_path = "Models/model.pth", attacker = None):
     model = model.to(device)
 
     loss_function, optimizer, scheduler = training_setup.create_training_setup(model)
@@ -317,9 +317,13 @@ def train_model(model, epochs, training_setup, dataloaders, save_path = "Models/
 
     for epoch in tqdm(range(epochs)):
         for i, (images, labels) in enumerate(trainDataLoader):
-            optimizer.zero_grad()
             images = images.to(device)
             labels = labels.to(device)
+
+            if attacker is not None:
+                images = attacker.attack(model, images, labels)
+
+            optimizer.zero_grad()
             output = model(images)
             loss = loss_function(output, labels)
             loss.backward()
@@ -342,20 +346,20 @@ def train_model(model, epochs, training_setup, dataloaders, save_path = "Models/
         torch.save(model, save_path)
     model = torch.load(save_path)
 
-def train_ensemble_standard(DE, epochs, training_setup, dataloaders, save_path = "Models/model.pth", save_each:bool = False):
+def train_ensemble_standard(DE, epochs, training_setup, dataloaders, save_path = "Models/model.pth", save_each:bool = False, attacker = None):
     def get_sub_path(model_nr):
         return save_path[:save_path.rfind(".")] + "_" + str(model_nr) + ".pth"
 
     for i, model in enumerate(DE):
         print("Training sub model nr", i)
         if save_each:
-            train_model(model, epochs, training_setup, dataloaders, save_path=get_sub_path(i))
+            train_model(model, epochs, training_setup, dataloaders, save_path=get_sub_path(i), attacker = attacker)
         else:
-            train_model(model, epochs, training_setup, dataloaders)
+            train_model(model, epochs, training_setup, dataloaders, attacker = attacker)
     torch.save(DE, save_path)
 
 
-def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "Models/model.pth"):
+def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "Models/model.pth", attacker = None):
     PE = PE.to(device)
 
     loss_function, optimizer, scheduler = training_setup.create_training_setup(PE)
@@ -375,10 +379,14 @@ def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "
 
     for epoch in tqdm(range(epochs)):
         for i, (images, labels) in enumerate(trainDataLoader):
-            optimizer.zero_grad()
             images = images.to(device)
             labels = labels.to(device)
             labels = labels.repeat_interleave(M)
+
+            if attacker is not None:
+                images = attacker.attack(model, images, labels)
+                
+            optimizer.zero_grad()            
             output = model(images)
             output = output.view(-1, PE.nClasses)
             loss = loss_function(output, labels)
@@ -401,6 +409,7 @@ def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "
     if not perform_val:
         torch.save(model, save_path)
     model = torch.load(save_path)
+
 
 
 def count_parameters(model):
