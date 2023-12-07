@@ -6,16 +6,9 @@ from ..Resnet_Implementation import Resnet18
 from ..Setup import Training_Setup
 from ..MCdropoutResnet import MCEnsemble
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-""" # Your original array with 4 values
-original_array = np.array([1, 2, 3, 2])
-
-# Create a 4x4 matrix indicating whether pairs are equal
-equality_matrix = (original_array[:, np.newaxis] == original_array[np.newaxis, :]).astype(int)
-
-print(equality_matrix) """
 
 def enable_dropout(model):
     """ Function to enable the dropout layers during test-time """
@@ -66,6 +59,10 @@ def diversity_test():
     with torch.no_grad():
         MC_matrix, MC_accuracies = dissagreement_matrix(MCE_model, dataloaders["test"])
 
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(MC_matrix, annot=True, cmap="Blues")
+    plt.show()
+
     MC_diff_pairs = prepare_difference_pairs(MC_matrix, MC_accuracies)
 
 
@@ -80,6 +77,10 @@ def diversity_test():
     with torch.no_grad():
         PE_matrix, PE_accuracues = dissagreement_matrix(PE_model, dataloaders["test"])
 
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(PE_matrix, annot=True, cmap="Blues")
+    plt.show()
+
     PE_diff_pairs = prepare_difference_pairs(PE_matrix, PE_accuracues)
 
 
@@ -93,6 +94,11 @@ def diversity_test():
     DE_model.eval()
     with torch.no_grad():
         DE_matrix, DE_accuracues = dissagreement_matrix(DE_model, dataloaders["test"])
+    
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(DE_matrix, annot=True, cmap="Blues")
+    plt.show()
+
 
     DE_diff_pairs = prepare_difference_pairs(DE_matrix, DE_accuracues)
 

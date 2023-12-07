@@ -187,7 +187,7 @@ class MCResnet(nn.Module):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int,
+            n_classes:int,
             Block,
             output_sizes,
             layer_sizes,
@@ -196,7 +196,7 @@ class MCResnet(nn.Module):
         super().__init__()
 
         channels = 64
-        self.n_classes = nClasses
+        self.n_classes = n_classes
 
         self.conv1 = nn.Conv2d(
             in_channels=inputChannels, 
@@ -218,7 +218,7 @@ class MCResnet(nn.Module):
 
         self.linear = nn.Linear(
             output_sizes[3],
-            nClasses
+            n_classes
         )
 
     def forward(self, x):
@@ -249,13 +249,13 @@ class MCResnet18(MCResnet):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int,
+            n_classes:int,
             dropout_prob:float = 0.0,
         ) -> None:
 
         super().__init__(
             inputChannels = inputChannels,
-            nClasses = nClasses,
+            n_classes = n_classes,
             Block = BasicBlock,
             output_sizes = [64, 64*2, 64*4, 64*8],
             layer_sizes = [2, 2, 2, 2],
@@ -267,13 +267,13 @@ class MCResnet50(MCResnet):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int,
+            n_classes:int,
             dropout_prob:float = 0.0,
         ) -> None:
 
         super().__init__(
             inputChannels = inputChannels,
-            nClasses = nClasses,
+            n_classes = n_classes,
             Block = BottleNeck,
             output_sizes = [256, 256*2, 256*4, 256*8],
             layer_sizes = [3, 4, 6, 3],

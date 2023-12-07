@@ -2,10 +2,11 @@ import os
 import torch
 import numpy as np
 
-from Experiments.Baselines.ResnetClassification import main, main2, MCDrop, Resnet_Single
-from Experiments.Baselines.DeepEnsemble import test1, Resnet_DE
+from Experiments.Baselines.ResnetClassification import Resnet_Single
+from Experiments.Baselines.DeepEnsemble import Resnet_DE
 from Experiments.Baselines.PackedEnsemble_test import PEResnet18_classification, PEResnet50_classification
 from Experiments.DiversityTests.Diversity import diversity_test
+from Experiments.FGSMTest.fgsm import fgsm_metrics_PE, fgsm_metrics_DE
 
 from Experiments.utils import get_CIFAR10, get_CIFAR100, train_model, evaluate_model, get_SVHN, get_dataloaders, count_parameters
 
@@ -61,7 +62,10 @@ if __name__ == "__main__":
     Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single3.pth", "Resnet18", "CIFAR10")
     Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single4.pth", "Resnet18", "CIFAR10")
     Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single5.pth", "Resnet18", "CIFAR10") """
-    Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_Single1.pth", "Resnet50", "CIFAR10")
+    #Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_Single1.pth", "Resnet50", "CIFAR10")
+    #fgsm_training()
+    #fgsm_metrics_DE()
+    #fgsm_metrics_PE()
     #Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_Single2.pth", "Resnet50", "CIFAR10")
     #MCDrop()
     #diversity_test()

@@ -179,7 +179,7 @@ class PackedEnsemble(nn.Module):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int,
+            n_classes:int,
             Block,
             output_sizes,
             layer_sizes,
@@ -191,7 +191,7 @@ class PackedEnsemble(nn.Module):
         self.M = M
         self.alpha = alpha
         self.gamma = gamma
-        self.nClasses = nClasses
+        self.n_classes = n_classes
 
         channels = 64
 
@@ -215,7 +215,7 @@ class PackedEnsemble(nn.Module):
 
         self.grouped_linear = nn.Conv2d(
             in_channels = output_sizes[3]*alpha,
-            out_channels = nClasses*M,
+            out_channels = n_classes*M,
             kernel_size=1,
             groups=M
         )
@@ -234,7 +234,7 @@ class PackedEnsemble(nn.Module):
     
     def probabilities(self, x):
         out = self.forward(x)
-        out = torch.reshape(out, (out.shape[0], self.M, self.nClasses))
+        out = torch.reshape(out, (out.shape[0], self.M, self.n_classes))
         p = F.softmax(out, dim = -1)
         p = torch.mean(p, dim = 1)
         return p
@@ -245,7 +245,7 @@ class PackedEnsemble(nn.Module):
         if the number of members is M, and x is of length 1, return M predictions
         """
         out = self.forward(x)
-        out = torch.reshape(out, (out.shape[0], self.M, self.nClasses))
+        out = torch.reshape(out, (out.shape[0], self.M, self.n_classes))
         preds = torch.argmax(out, dim = -1)
         return preds
     
@@ -267,7 +267,7 @@ class PackedResnet18(PackedEnsemble):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int,
+            n_classes:int,
             alpha:int,
             M:int,
             gamma:int,
@@ -275,7 +275,7 @@ class PackedResnet18(PackedEnsemble):
 
         super().__init__(
             inputChannels = inputChannels,
-            nClasses = nClasses,
+            n_classes = n_classes,
             Block = PackedBasicBlock,
             output_sizes = [64, 64*2, 64*4, 64*8],
             layer_sizes = [2, 2, 2, 2],
@@ -289,7 +289,7 @@ class PackedResnet50(PackedEnsemble):
     def __init__(
             self,
             inputChannels:int,
-            nClasses:int,
+            n_classes:int,
             alpha:int,
             M:int,
             gamma:int,
@@ -297,7 +297,7 @@ class PackedResnet50(PackedEnsemble):
 
         super().__init__(
             inputChannels = inputChannels,
-            nClasses = nClasses,
+            n_classes = n_classes,
             Block = PackedBottleNeck,
             output_sizes = [256, 256*2, 256*4, 256*8],
             layer_sizes = [3, 4, 6, 3],

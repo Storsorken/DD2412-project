@@ -384,11 +384,11 @@ def train_packed_ensemble(PE, epochs, training_setup, dataloaders, save_path = "
             labels = labels.repeat_interleave(M)
 
             if attacker is not None:
-                images = attacker.attack(model, images, labels)
+                images = attacker.PEattack(model, images, labels)
                 
             optimizer.zero_grad()            
             output = model(images)
-            output = output.view(-1, PE.nClasses)
+            output = output.view(-1, PE.n_classes)
             loss = loss_function(output, labels)
             loss.backward()
             optimizer.step()
