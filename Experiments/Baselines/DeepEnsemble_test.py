@@ -54,6 +54,7 @@ def Resnet_DE(result_path:str, resnet_name:str, dataset_name:str, epsilon:float 
         # This dataset is used for OOD test on models trained on CIFAR
         ood_data = get_SVHN(in_dataset_name="CIFAR10")
         ood_dataloaders = get_dataloaders(ood_data, batch_size)
+        n_classes = 10
     elif dataset_name == "CIFAR100":
         data = get_CIFAR100()
         dataloaders = get_dataloaders(data, batch_size, shuffle=True)
@@ -61,6 +62,7 @@ def Resnet_DE(result_path:str, resnet_name:str, dataset_name:str, epsilon:float 
         # This dataset is used for OOD test on models trained on CIFAR
         ood_data = get_SVHN(in_dataset_name="CIFAR100")
         ood_dataloaders = get_dataloaders(ood_data, batch_size)
+        n_classes = 100
 
 
     if epsilon is not None:
@@ -78,7 +80,7 @@ def Resnet_DE(result_path:str, resnet_name:str, dataset_name:str, epsilon:float 
             Model=Network, 
             n_models=4, 
             inputChannels=3, 
-            n_classes=10)
+            n_classes=n_classes)
         DE_model.to(device)
         
         

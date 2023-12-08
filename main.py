@@ -2,9 +2,9 @@ import os
 import torch
 import numpy as np
 
-from Experiments.Baselines.ResnetClassification import Resnet_Single
-from Experiments.Baselines.DeepEnsemble import Resnet_DE
-from Experiments.Baselines.PackedEnsemble_test import PEResnet18_classification, PEResnet50_classification
+from Experiments.Baselines.ResnetClassification import Resnet_Single, Resnet_Single_MC
+from Experiments.Baselines.DeepEnsemble_test import Resnet_DE
+from Experiments.Baselines.PackedEnsemble_test import Resnet_PE
 from Experiments.DiversityTests.Diversity import diversity_test
 from Experiments.FGSMTest.fgsm import fgsm_metrics_PE, fgsm_metrics_DE
 
@@ -51,26 +51,42 @@ def test_summary():
     print(final_metrics)
     print(final_metric_stats)
 
-                    
+def get_metrics(model_path, dataset_name):
 
+    if dataset_name == "CIFAR10":
+        data = get_CIFAR10()
+    elif dataset_name == "CIFAR100":
+        data = get_CIFAR100()
+        
+    dataloaders = get_dataloaders(data, 256, shuffle=True)
+
+    # This dataset is used for OOD test on models trained on CIFAR
+    ood_data = get_SVHN(in_dataset_name="CIFAR10")
+    ood_dataloaders = get_dataloaders(ood_data, 256)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(model_path)
+    model.to(device)
+    model.eval()
+    with torch.no_grad():
+        metrics = evaluate_model(model, dataloaders["test"], ood_dataloaders["test"])
+    print(metrics)
 
 
 if __name__ == "__main__":
-    #test_summary()
-    """ Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single1.pth", "Resnet18", "CIFAR10")
-    Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single2.pth", "Resnet18", "CIFAR10")
-    Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single3.pth", "Resnet18", "CIFAR10")
-    Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single4.pth", "Resnet18", "CIFAR10")
-    Resnet_Single("Results/Resnet18_Single/CIFAR10/Resnet18_CIFAR10_Single5.pth", "Resnet18", "CIFAR10") """
-    #Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_Single1.pth", "Resnet50", "CIFAR10")
-    #fgsm_training()
-    #fgsm_metrics_DE()
-    #fgsm_metrics_PE()
-    #Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_Single2.pth", "Resnet50", "CIFAR10")
-    #MCDrop()
-    #diversity_test()
-    #main()
-    #main2()
-    #test1()
-    #PEResnet18_classification()
-    #PEResnet50_classification()
+    get_metrics("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.1.pth", "CIFAR10")
+    get_metrics("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.25.pth", "CIFAR10")
+    get_metrics("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.5.pth", "CIFAR10")
+    get_metrics("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE1.pth", "CIFAR10")
+    get_metrics("Results/Resnet50_PE/CIFAR10/Resnet50_CIFAR10_PE1_(242).pth", "CIFAR10")
+    get_metrics("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE1.pth", "CIFAR100")
+    get_metrics("Results/Resnet50_PE/CIFAR100/Resnet50_CIFAR100_PE1_(242).pth", "CIFAR100")
+
+    """ Resnet_Single_MC("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.1.pth", "Resnet50", "CIFAR10", dropout_prob=0.1)
+    Resnet_Single_MC("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.25.pth", "Resnet50", "CIFAR10", dropout_prob=0.25)
+    Resnet_Single_MC("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.5.pth", "Resnet50", "CIFAR10", dropout_prob=0.5)
+
+    Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE1.pth", "Resnet50", "CIFAR10")
+    Resnet_PE("Results/Resnet50_PE/CIFAR10/Resnet50_CIFAR10_PE1_(242).pth", "Resnet50", "CIFAR10", alpha=2, M=4, gam=2)
+
+    Resnet_DE("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE1.pth", "Resnet50", "CIFAR100")
+    Resnet_PE("Results/Resnet50_PE/CIFAR100/Resnet50_CIFAR100_PE1_(242).pth", "Resnet50", "CIFAR100", alpha=2, M=4, gam=2) """

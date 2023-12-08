@@ -148,6 +148,7 @@ def Resnet_Single_MC(result_path:str, resnet_name:str, dataset_name:str, dropout
         # This dataset is used for OOD test on models trained on CIFAR
         ood_data = get_SVHN(in_dataset_name="CIFAR10")
         ood_dataloaders = get_dataloaders(ood_data, batch_size)
+        n_classes = 10
     elif dataset_name == "CIFAR100":
         data = get_CIFAR100()
         dataloaders = get_dataloaders(data, batch_size, shuffle=True)
@@ -155,13 +156,14 @@ def Resnet_Single_MC(result_path:str, resnet_name:str, dataset_name:str, dropout
         # This dataset is used for OOD test on models trained on CIFAR
         ood_data = get_SVHN(in_dataset_name="CIFAR100")
         ood_dataloaders = get_dataloaders(ood_data, batch_size)
+        n_classes = 100
     
     
     if os.path.exists(result_path):
         model = torch.load(result_path)
         model.to(device)
     else:
-        model = Network(inputChannels=3, n_classes=10, dropout_prob=dropout_prob)
+        model = Network(inputChannels=3, n_classes=n_classes, dropout_prob=dropout_prob)
         #print(model)
         model.to(device)
 
