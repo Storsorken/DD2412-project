@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -245,6 +246,8 @@ def evaluate_model(model, dataloader, ood_dataloader):
     return result
 
 def train_model(model, epochs, training_setup, dataloaders, save_path = "Models/model.pth", attacker = None):
+    dir_name = os.path.dirname(save_path)
+    os.makedirs(dir_name, exist_ok=True)
     model = model.to(device)
 
     loss_function, optimizer, scheduler = training_setup.create_training_setup(model)
@@ -301,6 +304,8 @@ def train_ensemble_standard(DE, epochs, training_setup, dataloaders, save_path =
             train_model(model, epochs, training_setup, dataloaders, save_path=get_sub_path(i), attacker = attacker)
         else:
             train_model(model, epochs, training_setup, dataloaders, attacker = attacker)
+    dir_name = os.path.dirname(save_path)
+    os.makedirs(dir_name, exist_ok=True)
     torch.save(DE, save_path)
 
 

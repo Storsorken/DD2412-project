@@ -72,21 +72,26 @@ def get_metrics(model_path, dataset_name):
     print(metrics)
 
 
+def set_random_seed(seed):
+    torch.random.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+
 if __name__ == "__main__":
-    get_metrics("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.1.pth", "CIFAR10")
-    get_metrics("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.25.pth", "CIFAR10")
-    get_metrics("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.5.pth", "CIFAR10")
-    get_metrics("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE1.pth", "CIFAR10")
-    get_metrics("Results/Resnet50_PE/CIFAR10/Resnet50_CIFAR10_PE1_(242).pth", "CIFAR10")
-    get_metrics("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE1.pth", "CIFAR100")
-    get_metrics("Results/Resnet50_PE/CIFAR100/Resnet50_CIFAR100_PE1_(242).pth", "CIFAR100")
+    # remaining cifar100
+    set_random_seed(1)
+    Resnet_DE("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE2.pth", "Resnet50", "CIFAR100")
+    set_random_seed(2)
+    Resnet_DE("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE3.pth", "Resnet50", "CIFAR100")
+    set_random_seed(3)
+    Resnet_DE("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE4.pth", "Resnet50", "CIFAR100")
+    set_random_seed(4)
+    Resnet_DE("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE5.pth", "Resnet50", "CIFAR100")
 
-    """ Resnet_Single_MC("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.1.pth", "Resnet50", "CIFAR10", dropout_prob=0.1)
-    Resnet_Single_MC("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.25.pth", "Resnet50", "CIFAR10", dropout_prob=0.25)
-    Resnet_Single_MC("Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_0.5.pth", "Resnet50", "CIFAR10", dropout_prob=0.5)
-
-    Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE1.pth", "Resnet50", "CIFAR10")
-    Resnet_PE("Results/Resnet50_PE/CIFAR10/Resnet50_CIFAR10_PE1_(242).pth", "Resnet50", "CIFAR10", alpha=2, M=4, gam=2)
-
-    Resnet_DE("Results/Resnet50_DE/CIFAR100/Resnet50_CIFAR100_DE1.pth", "Resnet50", "CIFAR100")
-    Resnet_PE("Results/Resnet50_PE/CIFAR100/Resnet50_CIFAR100_PE1_(242).pth", "Resnet50", "CIFAR100", alpha=2, M=4, gam=2) """
+    # remaining cifar10
+    set_random_seed(2)
+    Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE3.pth", "Resnet50", "CIFAR10")
+    set_random_seed(3)
+    Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE4.pth", "Resnet50", "CIFAR10")
+    set_random_seed(4)
+    Resnet_DE("Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE5.pth", "Resnet50", "CIFAR10")
