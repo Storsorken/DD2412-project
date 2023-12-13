@@ -47,7 +47,7 @@ def prepare_difference_pairs(matrix, accuracies):
     return normalized_diversity / (1 - accuracies)
 
 def diversity_test():
-    file_path = "Models/test_Resnet18_Dropout.pth"
+    """ file_path = "Models/test_Resnet18_Dropout.pth"
     MC_model = torch.load(file_path)
     MCE_model = MCEnsemble(MC_model, 4, device=device)
     MCE_model.to(device)
@@ -63,10 +63,10 @@ def diversity_test():
     sns.heatmap(MC_matrix, annot=True, cmap="Blues")
     plt.show()
 
-    MC_diff_pairs = prepare_difference_pairs(MC_matrix, MC_accuracies)
+    MC_diff_pairs = prepare_difference_pairs(MC_matrix, MC_accuracies) """
 
 
-    file_path = "Models/test_PackedEnsemble_Resnet18.pth"
+    file_path = "Results/Resnet50_PE/CIFAR10/Resnet50_CIFAR10_PE1_(242).pth"
     PE_model = torch.load(file_path)
     PE_model.to(device)
 
@@ -83,8 +83,7 @@ def diversity_test():
 
     PE_diff_pairs = prepare_difference_pairs(PE_matrix, PE_accuracues)
 
-
-    file_path = "Models/test_Ensemble_Resnet.pth"
+    file_path = "Results/Resnet50_DE/CIFAR10/Resnet50_CIFAR10_DE1.pth"
     DE_model = torch.load(file_path)
     DE_model.to(device)
 
@@ -102,12 +101,31 @@ def diversity_test():
 
     DE_diff_pairs = prepare_difference_pairs(DE_matrix, DE_accuracues)
 
-    plt.scatter(MC_accuracies, MC_diff_pairs, c='red', marker = "o", label='Dropout p=0.1')
+    colors = ["red", "black", "orange"]
+    ps = ["0.1", "0.25", "0.5"]
+
+    for color, p in zip(colors, ps):
+        file_path = "Results/Resnet50_MC/CIFAR10/Resnet50_CIFAR10_MC_" + p + ".pth"
+        MC_model = torch.load(file_path)
+        MCE_model = MCEnsemble(MC_model, 4, device=device)
+        MCE_model.to(device)
+
+        data = get_CIFAR10()
+        dataloaders = get_dataloaders(data, 256, shuffle=False)
+
+        MCE_model.eval()
+        with torch.no_grad():
+            MC_matrix, MC_accuracies = dissagreement_matrix(MCE_model, dataloaders["test"])
+
+        MC_diff_pairs = prepare_difference_pairs(MC_matrix, MC_accuracies)
+        plt.scatter(MC_accuracies, MC_diff_pairs, c=color, marker = "o", label='MC Dropout p=' + p)
+
+    
     plt.scatter(PE_accuracues, PE_diff_pairs, c='green', marker = "s", label='Packed Ensemble')
     plt.scatter(DE_accuracues, DE_diff_pairs, c='blue', marker = "^", label='Deep Ensemble')
     # Add labels and legend
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
+    plt.xlabel('Accuracy')
+    plt.ylabel('Fractions of labels changed / (1.0 - accuracy)')
     plt.legend()
 
     # Show the plot

@@ -67,6 +67,8 @@ def Resnet_DE(result_path:str, resnet_name:str, dataset_name:str, epsilon:float 
 
     if epsilon is not None:
         mean, std = get_dataset_stats(dataset_name)
+        mean = torch.tensor(mean, device=device)
+        std = torch.tensor(std, device=device)
         fgsm = FGSM(mean, std, epsilon=epsilon, loss_criterion=nn.CrossEntropyLoss())
     else:
         fgsm = None

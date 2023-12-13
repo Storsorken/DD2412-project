@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch import nn
-from ..utils import get_CIFAR10, get_CIFAR100, train_model, evaluate_model, get_SVHN
+from ..utils import get_CIFAR10, get_CIFAR100, train_model, evaluate_model, get_SVHN, get_dataset_stats
 from ..utils import get_dataloaders, count_parameters, train_ensemble_standard, train_packed_ensemble
 from ..Ensemble import DeepClassificationEnsemble
 from ..Resnet_Implementation import Resnet18
@@ -81,21 +81,24 @@ def evaluate_model(outputs, dataloader):
     }  
     return result
 
+def fgsm_metrics(file_path:str, dataset_name:str, epsilon:float = 0.01):
+    model = torch.load(file_path)
+    model.to(device)
 
-def fgsm_metrics_DE():
-    file_path = "Models/test_Ensemble_Resnet.pth"
-    DE_model = torch.load(file_path)
-    DE_model.to(device)
+    if dataset_name == "CIFAR10":
+        data = get_CIFAR10()
+    elif dataset_name == "CIFAR100":
+        data = get_CIFAR100()
 
-    data = get_CIFAR10()
     dataloaders = get_dataloaders(data, 256, shuffle=False)
 
-    DE_model.eval()
+    model.eval()
 
-    mean = torch.tensor([.4914, 0.4822, 0.4465], device=device)
-    std = torch.tensor([0.2470, 0.2435, 0.2616], device=device)
+    mean, std = get_dataset_stats(dataset_name)
+    mean = torch.tensor(mean, device=device)
+    std = torch.tensor(std, device=device)
 
-    attacker = FGSM(mean, std, epsilon=0.01, loss_criterion=nn.CrossEntropyLoss())
+    attacker = FGSM(mean, std, epsilon=epsilon, loss_criterion=nn.CrossEntropyLoss())
 
     
     output_probs = []
@@ -103,7 +106,42 @@ def fgsm_metrics_DE():
     for images, labels in dataloaders["test"]:
         images = images.to(device)
         labels = labels.to(device)
-        probs = torch.zeros((images.shape[0], 10), device=device)
+        perturbed_images = attacker.PEattack(model, images, labels)
+        with torch.no_grad():
+            probs = model.probabilities(perturbed_images)
+            output_probs.append(probs)
+
+    with torch.no_grad():
+        print(evaluate_model(output_probs, dataloaders["test"]))
+
+
+
+def fgsm_metrics_DE(file_path:str, dataset_name:str, epsilon:float = 0.01):
+    DE_model = torch.load(file_path)
+    DE_model.to(device)
+
+    if dataset_name == "CIFAR10":
+        data = get_CIFAR10()
+    elif dataset_name == "CIFAR100":
+        data = get_CIFAR100()
+
+    dataloaders = get_dataloaders(data, 256, shuffle=False)
+
+    DE_model.eval()
+
+    mean, std = get_dataset_stats(dataset_name)
+    mean = torch.tensor(mean, device=device)
+    std = torch.tensor(std, device=device)
+
+    attacker = FGSM(mean, std, epsilon=epsilon, loss_criterion=nn.CrossEntropyLoss())
+
+    
+    output_probs = []
+
+    for images, labels in dataloaders["test"]:
+        images = images.to(device)
+        labels = labels.to(device)
+        probs = torch.zeros((images.shape[0], DE_model.n_classes), device=device)
         for model in DE_model:
             perturbed_images = attacker.attack(model, images, labels)
             with torch.no_grad():
@@ -114,31 +152,34 @@ def fgsm_metrics_DE():
     with torch.no_grad():
         print(evaluate_model(output_probs, dataloaders["test"]))
 
-def fgsm_metrics_PE():
-    file_path = "Models/test_PackedEnsemble_Resnet18.pth"
-    model = torch.load(file_path)
-    model.to(device)
+def fgsm_metrics_PE(file_path:str, dataset_name:str, epsilon:float = 0.01):
+    PE_model = torch.load(file_path)
+    PE_model.to(device)
 
-    data = get_CIFAR10()
+    if dataset_name == "CIFAR10":
+        data = get_CIFAR10()
+    elif dataset_name == "CIFAR100":
+        data = get_CIFAR100()
+
     dataloaders = get_dataloaders(data, 256, shuffle=False)
 
-    model.eval()
+    PE_model.eval()
 
-    mean = torch.tensor([.4914, 0.4822, 0.4465], device=device)
-    std = torch.tensor([0.2470, 0.2435, 0.2616], device=device)
+    mean, std = get_dataset_stats(dataset_name)
+    mean = torch.tensor(mean, device=device)
+    std = torch.tensor(std, device=device)
 
-    attacker = FGSM(mean, std, epsilon=0.0, loss_criterion=nn.CrossEntropyLoss())
+    attacker = FGSM(mean, std, epsilon=epsilon, loss_criterion=nn.CrossEntropyLoss())
     
     output_probs = []
 
     for images, labels in dataloaders["test"]:
         images = images.to(device)
         labels = labels.to(device)
-        labels = labels.repeat_interleave(model.M)
-        probs = torch.zeros((images.shape[0], 10), device=device)
-        perturbed_images = attacker.PEattack(model, images, labels)
+        labels = labels.repeat_interleave(PE_model.M)
+        perturbed_images = attacker.PEattack(PE_model, images, labels)
         with torch.no_grad():
-            probs = model.probabilities(perturbed_images)
+            probs = PE_model.probabilities(perturbed_images)
             output_probs.append(probs)
 
     with torch.no_grad():
