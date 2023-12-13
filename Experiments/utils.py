@@ -361,6 +361,34 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
     
 
+def measure_throughput_on_gpu(model_path, batch_size, img_size):
+    """ Example: measure_throughput_on_gpu(model_path, 128, 32) for some model on CIFAR10/100 or similarly sized images"""
+    if device != torch.device("cuda"):
+        print("No GPU available when calling measure_throughput_on_gpu. Skipping test.")
+        return
+
+    model = torch.load(model_path)
+    model.to(device)
+    throughput_measurements = []
+    for _ in range(3):
+        # Source for benchmarking approach: https://deci.ai/blog/measure-inference-time-deep-neural-networks/
+        dummy_input = torch.randn(batch_size, 3, img_size, img_size, dtype=torch.float).to(device)
+        batch_repetitions = 100
+        total_time = 0
+        with torch.inference_mode():
+            for rep in range(batch_repetitions):
+                starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+                starter.record()
+                _ = model(dummy_input)
+                ender.record()
+                torch.cuda.synchronize()
+                curr_time = starter.elapsed_time(ender) / 1000
+                total_time += curr_time
+        throughput_measurements.append((batch_repetitions * batch_size) / total_time)
+    print("Throughput (imgs/s):", np.mean(throughput_measurements))
+    print("Standard deviation:", np.std(throughput_measurements))
+
+
 if __name__ == "__main__":
     output_probs = torch.tensor([[0.75, 0.05, 0.05, 0.05, 0.05],
                     [0.05, 0.75, 0.05, 0.05, 0.05],
